@@ -1,0 +1,677 @@
+{% extends 'base.html' %}
+
+{% block title %}View Packages - CIT Package Sorting System{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+<div class="card-text">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Package List</h5>
+        <a href="{{ url_for('db_crud_bp.manual_input') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle"></i> Add New Package
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- Search and Filter Controls -->
+        <div class="mb-4">
+            <button class="btn btn-outline-secondary mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+                <i class="bi bi-funnel"></i> Show/Hide Filters
+            </button>
+            
+            <div class="collapse" id="filterCollapse">
+                <div class="card card-body bg-light">
+                    <form id="filterForm" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="searchInput" class="form-label">Search</label>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search by receiver name, floor, or package type">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="statusFilter" class="form-label">Status</label>
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Delivered">Delivered</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="floorFilter" class="form-label">Floor</label>
+                            <select class="form-select" id="floorFilter">
+                                <option value="">All Floors</option>
+                                <option value="8">Floor 8</option>
+                                <option value="17">Floor 17</option>
+                                <option value="18">Floor 18</option>
+                                <option value="19">Floor 19</option>
+                                <option value="20">Floor 20</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="packageTypeFilter" class="form-label">Package Type</label>
+                            <select class="form-select" id="packageTypeFilter">
+                                <option value="">All Types</option>
+                                <option value="Small">Small Package</option>
+                                <option value="Medium">Medium Package</option>
+                                <option value="Large">Large Package</option>
+                                <option value="Document">Document</option>
+                                <option value="Fragile">Fragile</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="dateFromFilter" class="form-label">Date From</label>
+                            <input type="date" class="form-control" id="dateFromFilter">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="dateToFilter" class="form-label">Date To</label>
+                            <input type="date" class="form-control" id="dateToFilter">
+                        </div>
+                        
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="button" id="resetFilters" class="btn btn-secondary me-2">
+                                <i class="bi bi-x-circle"></i> Reset Filters
+                            </button>
+                            <button type="button" id="applyFilters" class="btn btn-primary">
+                                <i class="bi bi-funnel"></i> Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Filters Display -->
+        <div id="activeFilters" class="mb-3 d-none">
+            <h6>Active Filters:</h6>
+            <div id="filterBadges" class="d-flex flex-wrap gap-2">
+                <!-- Filter badges will be added here dynamically -->
+            </div>
+        </div>
+
+        <!-- Packages Table -->
+        <div class="table-responsive">
+            <table class="table table-hover" id="packagesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Receiver</th>
+                        <th>Floor</th>
+                        <th>Package Type</th>
+                        <th>Received Date</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for package in packages|sort(attribute='timestamp', reverse=true) %}
+                    <tr data-id="{{ package.id }}" data-floor="{{ package.target_floor }}" data-type="{{ package.package_type }}" data-status="{{ package.status }}" data-date="{{ package.timestamp.strftime('%Y-%m-%d') }}">
+                        <td>{{ package.id }}</td>
+                        <td>{{ package.receiver_name }}</td>
+                        <td>{{ package.target_floor }}</td>
+                        <td>{{ package.package_type }}</td>
+                        <td>{{ package.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                        <td>
+                            <span class="badge {% if package.status == 'Pending' %}bg-warning{% else %}bg-success{% endif %} position-relative status-badge"
+                                  data-bs-toggle="tooltip"
+                                  data-bs-placement="top"
+                                  title="Status updated: {{ package.status_updated_at.strftime('%Y-%m-%d %H:%M:%S') if package.status_updated_at else 'Unknown' }}">
+                                {{ package.status }}
+                            </span>
+                        </td>
+                        <td>{{ package.notes }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('db_crud_bp.edit_package', package_id=package.id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-success mark-delivered" 
+                                        data-package-id="{{ package.id }}" title="Mark as Delivered">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-package" 
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal" 
+                                        data-package-id="{{ package.id }}" data-package-name="{{ package.receiver_name }}" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="alert alert-info text-center d-none">
+            No packages found matching your filters. Try adjusting your search criteria.
+        </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Package list navigation" class="mt-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span id="pageInfo">Showing <span id="currentShowing">1-{{ packages|length if packages|length < 10 else 10 }}</span> of <span id="totalItems">{{ packages|length }}</span> packages</span>
+                </div>
+                
+                <ul class="pagination" id="pagination">
+                    <!-- Pagination will be generated dynamically -->
+                </ul>
+                
+                <div>
+                    <select id="itemsPerPage" class="form-select form-select-sm" style="width: auto;">
+                        <option value="10">10 per page</option>
+                        <option value="25">25 per page</option>
+                        <option value="50">50 per page</option>
+                        <option value="100">100 per page</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete the package for <span id="packageReceiver"></span>?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <form id="deleteForm" method="POST" action="">
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deliverModal" tabindex="-1" aria-labelledby="deliverModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deliverModalLabel">Confirm Delivery</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to mark the package for <span id="deliverPackageReceiver"></span> as delivered?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="confirmDeliverBtn" class="btn btn-success" data-package-id="">Confirm Delivery</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize Bootstrap tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+  return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
+// Pagination and filtering variables
+let currentPage = 1;
+let itemsPerPage = 10;
+let filteredRows = [];
+let allRows = [];
+
+// Cache all table rows and initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    allRows = Array.from(document.querySelectorAll('#packagesTable tbody tr'));
+    filteredRows = [...allRows];
+    
+    // Set today's date as the default "to" date if not already set
+    if (!document.getElementById('dateToFilter').value) {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        document.getElementById('dateToFilter').value = formattedDate;
+    }
+    
+    // Set default "from" date as 30 days ago if not already set
+    if (!document.getElementById('dateFromFilter').value) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const formattedDate = thirtyDaysAgo.toISOString().split('T')[0];
+        document.getElementById('dateFromFilter').value = formattedDate;
+    }
+    
+    updatePagination();
+});
+
+// Apply all filters
+function applyFilters() {
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+    const selectedStatus = document.getElementById('statusFilter').value;
+    const selectedFloor = document.getElementById('floorFilter').value;
+    const selectedType = document.getElementById('packageTypeFilter').value;
+    const dateFrom = document.getElementById('dateFromFilter').value;
+    const dateTo = document.getElementById('dateToFilter').value;
+    
+    // Update filteredRows based on all criteria
+    filteredRows = allRows.filter(row => {
+        const id = row.cells[0].textContent.toLowerCase();
+        const receiver = row.cells[1].textContent.toLowerCase();
+        const floor = row.cells[2].textContent.toLowerCase();
+        const type = row.cells[3].textContent.toLowerCase();
+        const dateStr = row.getAttribute('data-date');
+        const status = row.getAttribute('data-status').toLowerCase();
+        
+        // Check all filter conditions
+        const matchesSearch = !searchText || 
+            id.includes(searchText) || 
+            receiver.includes(searchText) || 
+            floor.includes(searchText) || 
+            type.includes(searchText);
+            
+        const matchesStatus = !selectedStatus || status === selectedStatus.toLowerCase();
+        const matchesFloor = !selectedFloor || floor === selectedFloor;
+        const matchesType = !selectedType || type.toLowerCase() === selectedType.toLowerCase();
+        
+        // Date filtering
+        let matchesDate = true;
+        if (dateFrom || dateTo) {
+            const rowDate = new Date(dateStr);
+            
+            if (dateFrom) {
+                const fromDate = new Date(dateFrom);
+                matchesDate = matchesDate && rowDate >= fromDate;
+            }
+            
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                // Set time to end of day
+                toDate.setHours(23, 59, 59, 999);
+                matchesDate = matchesDate && rowDate <= toDate;
+            }
+        }
+        
+        return matchesSearch && matchesStatus && matchesFloor && matchesType && matchesDate;
+    });
+    
+    // Reset to first page when applying filters
+    currentPage = 1;
+    
+    // Update the UI
+    updatePagination();
+    updateActiveBadges();
+}
+
+// Update the display of which filters are currently active
+function updateActiveBadges() {
+    const badgesContainer = document.getElementById('filterBadges');
+    const activeFiltersSection = document.getElementById('activeFilters');
+    
+    // Clear previous badges
+    badgesContainer.innerHTML = '';
+    
+    // Create badges for active filters
+    const searchText = document.getElementById('searchInput').value;
+    const selectedStatus = document.getElementById('statusFilter').value;
+    const selectedFloor = document.getElementById('floorFilter').value;
+    const selectedType = document.getElementById('packageTypeFilter').value;
+    const dateFrom = document.getElementById('dateFromFilter').value;
+    const dateTo = document.getElementById('dateToFilter').value;
+    
+    let hasActiveFilters = false;
+    
+    if (searchText) {
+        createBadge('Search: ' + searchText, 'searchInput');
+        hasActiveFilters = true;
+    }
+    
+    if (selectedStatus) {
+        createBadge('Status: ' + selectedStatus, 'statusFilter');
+        hasActiveFilters = true;
+    }
+    
+    if (selectedFloor) {
+        createBadge('Floor: ' + selectedFloor, 'floorFilter');
+        hasActiveFilters = true;
+    }
+    
+    if (selectedType) {
+        createBadge('Type: ' + selectedType, 'packageTypeFilter');
+        hasActiveFilters = true;
+    }
+    
+    if (dateFrom) {
+        createBadge('From: ' + dateFrom, 'dateFromFilter');
+        hasActiveFilters = true;
+    }
+    
+    if (dateTo) {
+        createBadge('To: ' + dateTo, 'dateToFilter');
+        hasActiveFilters = true;
+    }
+    
+    // Show or hide the active filters section
+    if (hasActiveFilters) {
+        activeFiltersSection.classList.remove('d-none');
+    } else {
+        activeFiltersSection.classList.add('d-none');
+    }
+    
+    // Show message if no results
+    const noResultsMessage = document.getElementById('noResults');
+    if (filteredRows.length === 0) {
+        noResultsMessage.classList.remove('d-none');
+    } else {
+        noResultsMessage.classList.add('d-none');
+    }
+}
+
+// Create a badge for an active filter
+function createBadge(text, filterId) {
+    const badgesContainer = document.getElementById('filterBadges');
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-primary d-flex align-items-center gap-2';
+    badge.innerHTML = `${text} <button type="button" class="btn-close btn-close-white" style="font-size: 0.6rem;" aria-label="Remove filter"></button>`;
+    
+    // Add click event to remove this filter
+    badge.querySelector('button').addEventListener('click', function() {
+        const filterElement = document.getElementById(filterId);
+        if (filterElement.tagName === 'SELECT') {
+            filterElement.value = '';
+        } else {
+            filterElement.value = '';
+        }
+        applyFilters();
+    });
+    
+    badgesContainer.appendChild(badge);
+}
+
+// Update pagination based on filtered rows
+function updatePagination() {
+    const totalItems = filteredRows.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    // Update the info text
+    document.getElementById('totalItems').textContent = totalItems;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    document.getElementById('currentShowing').textContent = totalItems > 0 ? `${startIndex + 1}-${endIndex}` : '0';
+    
+    // Generate pagination controls
+    const paginationElement = document.getElementById('pagination');
+    paginationElement.innerHTML = '';
+    
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    const prevLink = document.createElement('a');
+    prevLink.className = 'page-link';
+    prevLink.href = '#';
+    prevLink.textContent = 'Previous';
+    prevLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            updatePagination();
+        }
+    });
+    prevLi.appendChild(prevLink);
+    paginationElement.appendChild(prevLi);
+    
+    // Page numbers
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    if (endPage - startPage < 4 && totalPages > 5) {
+        startPage = Math.max(1, endPage - 4);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        const pageLink = document.createElement('a');
+        pageLink.className = 'page-link';
+        pageLink.href = '#';
+        pageLink.textContent = i;
+        pageLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentPage = i;
+            updatePagination();
+        });
+        pageLi.appendChild(pageLink);
+        paginationElement.appendChild(pageLi);
+    }
+    
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`;
+    const nextLink = document.createElement('a');
+    nextLink.className = 'page-link';
+    nextLink.href = '#';
+    nextLink.textContent = 'Next';
+    nextLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            currentPage++;
+            updatePagination();
+        }
+    });
+    nextLi.appendChild(nextLink);
+    paginationElement.appendChild(nextLi);
+    
+    // Update table rows visibility
+    updateTableRows();
+}
+
+// Show only the rows for the current page
+function updateTableRows() {
+    // First hide all rows
+    allRows.forEach(row => {
+        row.style.display = 'none';
+    });
+    
+    // Then show only the filtered rows for current page
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
+    
+    for (let i = startIndex; i < endIndex; i++) {
+        if (filteredRows[i]) {
+            filteredRows[i].style.display = '';
+        }
+    }
+}
+
+// Event listeners
+document.getElementById('searchInput').addEventListener('input', function() {
+    applyFilters();
+});
+
+document.getElementById('statusFilter').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('floorFilter').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('packageTypeFilter').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('dateFromFilter').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('dateToFilter').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('applyFilters').addEventListener('click', function() {
+    applyFilters();
+});
+
+document.getElementById('resetFilters').addEventListener('click', function() {
+    // Reset all filter inputs
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('floorFilter').value = '';
+    document.getElementById('packageTypeFilter').value = '';
+    
+    // Reset date filters to default values (30 days ago to today)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    document.getElementById('dateToFilter').value = today.toISOString().split('T')[0];
+    document.getElementById('dateFromFilter').value = thirtyDaysAgo.toISOString().split('T')[0];
+    
+    // Apply the reset
+    applyFilters();
+});
+
+document.getElementById('itemsPerPage').addEventListener('change', function() {
+    itemsPerPage = parseInt(this.value);
+    currentPage = 1; // Reset to first page
+    updatePagination();
+});
+
+document.querySelectorAll('.mark-delivered').forEach(button => {
+    button.addEventListener('click', function() {
+        const packageId = this.getAttribute('data-package-id');
+        const row = this.closest('tr');
+        const currentStatus = row.getAttribute('data-status');
+        
+        // Check if already delivered
+        if (currentStatus === 'Delivered') {
+            // Package is already delivered, do nothing
+            // Optionally show a small toast or notification
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-info alert-dismissible fade show position-fixed bottom-0 end-0 m-3';
+            toast.innerHTML = `This package is already marked as delivered. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+            document.body.appendChild(toast);
+            
+            // Auto dismiss after 3 seconds
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(toast);
+                bsAlert.close();
+            }, 3000);
+            
+            return;
+        }
+        
+        // Continue with confirmation modal for packages not yet delivered
+        const packageName = row.cells[1].textContent;
+        
+        // Update the modal with package details
+        document.getElementById('deliverPackageReceiver').textContent = packageName;
+        document.getElementById('confirmDeliverBtn').setAttribute('data-package-id', packageId);
+        
+        // Show the modal
+        const deliverModal = new bootstrap.Modal(document.getElementById('deliverModal'));
+        deliverModal.show();
+    });
+});
+
+// Add this event listener for the confirm button in the deliver modal
+document.getElementById('confirmDeliverBtn').addEventListener('click', function() {
+    const packageId = this.getAttribute('data-package-id');
+    const modal = bootstrap.Modal.getInstance(document.getElementById('deliverModal'));
+    
+    // Send an AJAX request to update the status
+    fetch(`/package/${packageId}/deliver`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            status: 'Delivered'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close the modal
+            modal.hide();
+            
+            // Update the UI to show delivered status
+            const row = document.querySelector(`tr[data-id="${packageId}"]`);
+            const statusCell = row.cells[5].querySelector('span');
+            statusCell.textContent = 'Delivered';
+            statusCell.className = 'badge bg-success position-relative status-badge';
+            
+            // Update data attribute for filtering
+            row.setAttribute('data-status', 'Delivered');
+            
+            // Update the tooltip with the new status update time
+            if (data.status_updated_at) {
+                statusCell.setAttribute('data-bs-original-title', 'Status updated: ' + data.status_updated_at);
+                // Reinitialize the tooltip
+                const tooltip = bootstrap.Tooltip.getInstance(statusCell);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+                new bootstrap.Tooltip(statusCell);
+            }
+            
+            // Show flash message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `Package for ${row.cells[1].textContent} marked as delivered. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+            document.querySelector('.card-text').appendChild(alert);
+            
+            // If status filter is active, reapply filters
+            if (document.getElementById('statusFilter').value) {
+                applyFilters();
+            }
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+});
+
+// Delete package functionality
+document.querySelectorAll('.delete-package').forEach(button => {
+    button.addEventListener('click', function() {
+        const packageId = this.getAttribute('data-package-id');
+        const packageName = this.getAttribute('data-package-name');
+        
+        // Update the modal with package details
+        document.getElementById('packageReceiver').textContent = packageName;
+        document.getElementById('deleteForm').action = `/package/${packageId}/delete`;
+    });
+});
+
+// Initialize the display
+applyFilters();
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+# Project-specific directories containing sensitive data
+instance/
+students_list/
+test_data/
+exports/
+database_backups/
+database_list/
+keras_ocr_results/
+ocr_accuracy_results/
+parameter_optimization_results/
+
+# Sensitive files
+list_staff_mahasiswa.csv
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Model files (large binary files)
+*.h5
+*.hdf5
+*.pkl
+*.model
+
+# Keep specific model files that are required
+!models/recognizer_with_augment.h5
+
+# Keep empty directories with .gitkeep
+!instance/.gitkeep
+!students_list/.gitkeep
+!test_data/.gitkeep
+!exports/.gitkeep
+!database_backups/.gitkeep 

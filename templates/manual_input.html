@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Manual Input - CIT Package Sorting System{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <!-- Manual Input Form -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Manual Package Input</h5>
+            </div>
+            <div class="card-body">
+                {% if success_message %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ success_message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                {% if error_message %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ error_message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('db_crud_bp.manual_input') }}">
+                    <div class="row g-3">
+                        <!-- Receiver Information -->
+                        <div class="col-md-6">
+                            <label for="receiver_name" class="form-label">Receiver Name *</label>
+                            <input type="text" class="form-control" id="receiver_name" name="receiver_name" required autocomplete="off" list="name-suggestions">
+                            <datalist id="name-suggestions">
+                                {% for person in all_people %}
+                                <option value="{{ person.name }}" data-floor="{{ person.floor }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        
+                        <!-- Package Details -->
+                        <div class="col-md-6">
+                            <label for="target_floor" class="form-label">Target Floor *</label>
+                            <select class="form-select" id="target_floor" name="target_floor" required>
+                                <option value="">Select Floor</option>
+                                <option value="8">Floor 8</option>
+                                <option value="17">Floor 17</option>
+                                <option value="18">Floor 18</option>
+                                <option value="19">Floor 19</option>
+                                <option value="20">Floor 20</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="package_type" class="form-label">Package Type *</label>
+                            <select class="form-select" id="package_type" name="package_type" required>
+                                <option value="">Select Type</option>
+                                <option value="Small">Small Package</option>
+                                <option value="Medium">Medium Package</option>
+                                <option value="Large">Large Package</option>
+                                <option value="Document">Document</option>
+                                <option value="Fragile">Fragile</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="notes" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <small class="text-muted">* Required fields</small>
+                        </div>
+
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Submit Package
+                            </button>
+                            <button type="reset" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Clear Form
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Direction Guide -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Platform Direction Guide</h5>
+            </div>
+            <div class="card-body">
+                <div class="platform-guide">
+                    <div class="text-center mb-4">
+                        <h6 class="text-muted">Current Configuration</h6>
+                        <div class="position-relative" style="width: 220px; height: 220px; margin: 0 auto;">
+                            <!-- Directional Arrows -->
+                            <div class="position-absolute top-0 start-50 translate-middle-x text-center">
+                                <i class="bi bi-arrow-up-circle-fill fs-1 {% if data.target_floor == 17 %}text-primary{% else %}text-secondary{% endif %}"></i>
+                                <p class="mt-1">Floor 17</p>
+                            </div>
+                            <div class="position-absolute top-50 end-0 translate-middle-y text-center">
+                                <i class="bi bi-arrow-right-circle-fill fs-1 {% if data.target_floor == 20 %}text-primary{% else %}text-secondary{% endif %}"></i>
+                                <p class="mt-1">Floor 20</p>
+                            </div>
+                            <div class="position-absolute bottom-0 start-50 translate-middle-x text-center">
+                                <i class="bi bi-arrow-down-circle-fill fs-1 {% if data.target_floor == 19 %}text-primary{% else %}text-secondary{% endif %}"></i>
+                                <p class="mt-1">Floor 19</p>
+                            </div>
+                            <div class="position-absolute top-50 start-0 translate-middle-y text-center">
+                                <i class="bi bi-arrow-left-circle-fill fs-1 {% if data.target_floor == 18 %}text-primary{% else %}text-secondary{% endif %}"></i>
+                                <p class="mt-1">Floor 18</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="floor-guide mt-3">
+                        <h6>Floor Directions:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-up-circle-fill text-primary"></i>
+                                <span class="ms-2">Floor 17 - Up Box</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-left-circle-fill text-primary"></i>
+                                <span class="ms-2">Floor 18 - Left Box</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-down-circle-fill text-primary"></i>
+                                <span class="ms-2">Floor 19 - Down Box</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-right-circle-fill text-primary"></i>
+                                <span class="ms-2">Floor 20 - Right Box</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const requiredFields = ['receiver_name', 'target_floor', 'package_type'];
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        const input = document.getElementById(field);
+        if (!input.value.trim()) {
+            input.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            input.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+
+// Clear form validation styling on input
+document.querySelectorAll('.form-control, .form-select').forEach(input => {
+    input.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+});
+
+// Create a mapping of names to floors
+const peopleData = {};
+document.querySelectorAll('#name-suggestions option').forEach(option => {
+    peopleData[option.value] = option.dataset.floor;
+});
+
+// Auto-fill floor when a name is selected
+document.getElementById('receiver_name').addEventListener('input', function() {
+    const selectedName = this.value;
+    const floor = peopleData[selectedName];
+    
+    if (floor) {
+        document.getElementById('target_floor').value = floor;
+        updatePlatformDirection(floor);
+    }
+});
+
+// Update platform direction visual when floor is selected
+document.getElementById('target_floor').addEventListener('change', function() {
+    updatePlatformDirection(this.value);
+});
+
+function updatePlatformDirection(floor) {
+    const arrows = document.querySelectorAll('.platform-guide .bi-arrow-up-circle-fill, .platform-guide .bi-arrow-down-circle-fill, .platform-guide .bi-arrow-left-circle-fill, .platform-guide .bi-arrow-right-circle-fill');
+    
+    arrows.forEach(arrow => arrow.classList.replace('text-primary', 'text-secondary'));
+    
+    if (floor) {
+        const directionMap = {
+            '17': 'up',
+            '18': 'left',
+            '19': 'down',
+            '20': 'right'
+        };
+        
+        const direction = directionMap[floor];
+        const activeArrow = document.querySelector(`.platform-guide .bi-arrow-${direction}-circle-fill`);
+        if (activeArrow) {
+            activeArrow.classList.replace('text-secondary', 'text-primary');
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - CIT Package Sorting System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-2">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <h1 class="mb-4">Application Settings</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    OCR Settings
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="ocr_preprocess_width" class="form-label">Image Preprocessing Width</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="ocr_preprocess_width" 
+                                name="ocr_preprocess_width" 
+                                value="{{ current_width }}"
+                                min="0"
+                                required
+                            >
+                            <small class="form-text text-muted">
+                                <strong>Preprocessing Options:</strong>
+                                <ul class="list-unstyled">
+                                    <li>
+                                        <i class="bi bi-check-circle text-success"></i> 
+                                        Enter a positive number (e.g., 560) to resize the image (in pixels)
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-x-circle text-warning"></i> 
+                                        Enter 0 to disable preprocessing (use original image)
+                                    </li>
+                                </ul>
+                                Affects image scaling and OCR processing performance.
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="match_threshold" class="form-label">Name Matching Threshold</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="match_threshold" 
+                                name="match_threshold" 
+                                value="{{ '%.3f'|format(current_threshold) }}"
+                                min="0"
+                                max="1"
+                                step="0.001"
+                                required
+                            >
+                            <small class="form-text text-muted">
+                                <strong>Threshold Options:</strong>
+                                <ul class="list-unstyled">
+                                    <li>
+                                        <i class="bi bi-arrow-up text-danger"></i> 
+                                        Higher values (closer to 1.0) require more precise matches
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-arrow-down text-success"></i> 
+                                        Lower values (closer to 0.0) allow more approximate matches
+                                    </li>
+                                </ul>
+                                Default: 0.360 - Adjust based on your OCR accuracy needs (3 decimal precision)
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Processing Hardware (Application Restart Required)</label>
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input" 
+                                    type="radio" 
+                                    name="use_gpu" 
+                                    id="use_gpu_true" 
+                                    value="1" 
+                                    {% if gpu_available and current_use_gpu %}checked{% endif %}
+                                    {% if not gpu_available %}disabled{% endif %}
+                                >
+                                <label class="form-check-label" for="use_gpu_true">
+                                    <i class="bi bi-gpu-card me-1"></i> Use GPU 
+                                    {% if not gpu_available %}<span class="badge bg-secondary">Not Available</span>{% endif %}
+                                </label>
+                                <small class="d-block text-muted ms-4">
+                                    Faster processing, recommended for high volume
+                                </small>
+                            </div>
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input" 
+                                    type="radio" 
+                                    name="use_gpu" 
+                                    id="use_gpu_false" 
+                                    value="0" 
+                                    {% if not current_use_gpu %}checked{% endif %}
+                                >
+                                <label class="form-check-label" for="use_gpu_false">
+                                    <i class="bi bi-cpu me-1"></i> Use CPU
+                                </label>
+                                <small class="d-block text-muted ms-4">
+                                    More compatible, may be slower
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Save Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Settings Guide
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Optimizing Your System</h5>
+                    <p>Adjust these settings to fine-tune your package sorting system:</p>
+                    
+                    <div class="mb-3">
+                        <h6><i class="bi bi-image me-2"></i>Image Preprocessing</h6>
+                        <p class="small">
+                            A smaller width (e.g., 320-480) may be faster but less accurate.<br>
+                            A larger width (e.g., 800-1200) may be more accurate but slower.<br>
+                            Set to 0 to use original image size (highest quality but slowest).
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6><i class="bi bi-arrow-down-up me-2"></i>Match Threshold</h6>
+                        <p class="small">
+                            <strong>Recommended ranges:</strong><br>
+                            - High quality OCR: 0.400 to 0.600<br>
+                            - Medium quality OCR: 0.300 to 0.400<br>
+                            - Low quality OCR: 0.200 to 0.300<br><br>
+                            <strong>Fine-tuning examples:</strong><br>
+                            - 0.365: Slightly more lenient than default<br>
+                            - 0.355: Slightly more permissive than default<br><br>
+                            If you notice too many false matches, increase the threshold.<br>
+                            If legitimate packages aren't being matched, decrease the threshold.
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6><i class="bi bi-gpu-card me-2"></i>Processing Hardware (Restart the application for changes to take effect)</h6>
+                        <p class="small">
+                            <strong>GPU processing:</strong><br>
+                            - Faster OCR processing, especially for high-resolution images<br>
+                            - Better for systems with many packages per hour<br>
+                            - Requires compatible NVIDIA GPU with CUDA support<br><br>
+                            <strong>CPU processing:</strong><br>
+                            - Works on all computers without specialized hardware<br>
+                            - Suitable for lower volume operations<br>
+                            - May consume less power on laptop systems<br><br>
+                            {% if not gpu_available %}
+                            <span class="text-danger">Note: No compatible GPU detected on your system.</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

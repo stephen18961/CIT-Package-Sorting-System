@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Package - CIT Package Sorting System{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('db_crud_bp.view_packages') }}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Package List
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Edit Package Details</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('db_crud_bp.edit_package', package_id=package.id) }}">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="receiver_name" class="form-label">Receiver Name *</label>
+                    <input type="text" class="form-control" id="receiver_name" name="receiver_name" 
+                           value="{{ package.receiver_name }}" required autocomplete="off" list="name-suggestions">
+                    <datalist id="name-suggestions">
+                        {% for person in all_people %}
+                        <option value="{{ person.name }}" data-floor="{{ person.floor }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="col-md-6">
+                    <label for="target_floor" class="form-label">Floor Number *</label>
+                    <select class="form-select" id="target_floor" name="target_floor" required>
+                        <option value="">Select Floor</option>
+                        <option value="8" {% if package.target_floor|int == 8 %}selected{% endif %}>Floor 8</option>
+                        <option value="17" {% if package.target_floor|int == 17 %}selected{% endif %}>Floor 17</option>
+                        <option value="18" {% if package.target_floor|int == 18 %}selected{% endif %}>Floor 18</option>
+                        <option value="19" {% if package.target_floor|int == 19 %}selected{% endif %}>Floor 19</option>
+                        <option value="20" {% if package.target_floor|int == 20 %}selected{% endif %}>Floor 20</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="package_type" class="form-label">Package Type *</label>
+                    <select class="form-select" id="package_type" name="package_type" required>
+                        <option value="">Select Type</option>
+                        <option value="Small Package" {% if package.package_type == 'Small Package' %}selected{% endif %}>Small Package</option>
+                        <option value="Medium Package" {% if package.package_type == 'Medium Package' %}selected{% endif %}>Medium Package</option>
+                        <option value="Large Package" {% if package.package_type == 'Large Package' %}selected{% endif %}>Large Package</option>
+                        <option value="Document" {% if package.package_type == 'Document' %}selected{% endif %}>Document</option>
+                        <option value="Fragile" {% if package.package_type == 'Fragile' %}selected{% endif %}>Fragile</option>
+                        <option value="Other" {% if package.package_type == 'Other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">Additional Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ package.notes }}</textarea>
+            </div>
+            
+            <div class="col-12 mb-3">
+                <small class="text-muted">* Required fields</small>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" onclick="window.location='{{ url_for('db_crud_bp.view_packages') }}'">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Update Package
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const requiredFields = ['receiver_name', 'target_floor', 'package_type'];
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        const input = document.getElementById(field);
+        if (!input.value.trim()) {
+            input.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            input.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+
+// Clear form validation styling on input
+document.querySelectorAll('.form-control, .form-select').forEach(input => {
+    input.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+});
+
+// Create a mapping of names to floors
+const peopleData = {};
+document.querySelectorAll('#name-suggestions option').forEach(option => {
+    peopleData[option.value] = option.dataset.floor;
+});
+
+// Auto-fill floor when a name is selected
+document.getElementById('receiver_name').addEventListener('input', function() {
+    const selectedName = this.value;
+    const floor = peopleData[selectedName];
+    
+    if (floor) {
+        document.getElementById('target_floor').value = floor;
+    }
+});
+</script>
+{% endblock %}

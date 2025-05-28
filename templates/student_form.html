@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if student %}Edit Student{% else %}Add New Student{% endif %} - CIT Package Sorting System
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ action }} Student</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Student Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ student.name if student else '' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="floor" class="form-label">Floor Assignment</label>
+                            <input type="number" class="form-control" id="floor" name="floor" 
+                                   value="{{ student.floor if student else '' }}" required min="1">
+                            <div class="form-text">Enter the floor number where the student is located</div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('db_crud_bp.list_students') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to List
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-2"></i>Save Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

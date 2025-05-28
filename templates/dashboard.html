@@ -1,0 +1,705 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - CIT Package Sorting System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Camera Stream & OCR Process Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Package Image Capture</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="camera-feed position-relative" style="width: 100%; overflow: hidden;">
+                    <!-- Camera container with aspect ratio preservation -->
+                    <div id="camera-container" style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%; /* Default 16:9 ratio */">
+                        <!-- Live video feed -->
+                        <video id="webcam" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background-color: #000;"></video>
+                        
+                        <!-- Captured image preview (hidden initially) -->
+                        <canvas id="capturedCanvas" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background-color: #000;"></canvas>
+                        
+                        <!-- No webcam message -->
+                        <div id="no-webcam" class="text-center" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                            <h3>Camera Feed</h3>
+                            <p>No camera access or camera not found</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="camera-controls p-3 text-center">
+                    <div class="btn-group" role="group" aria-label="Capture Methods">
+                        <div id="captureControls">
+                            <button id="captureButton" class="btn btn-primary me-2">
+                                <i class="bi bi-camera-fill me-2"></i>Capture
+                            </button>
+                            <label class="btn btn-secondary">
+                                <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                                <i class="bi bi-upload me-2"></i>Upload Image
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="previewControls" style="display: none;">
+                        <button id="recaptureButton" class="btn btn-secondary me-3">
+                            <i class="bi bi-arrow-repeat me-2"></i>Recapture
+                        </button>
+                        <button id="confirmCaptureButton" class="btn btn-success">
+                            <i class="bi bi-check-circle me-2"></i>Confirm Image
+                        </button>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <span id="captureStatus" class="badge bg-secondary" style="display: none;">Ready for processing</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card status-card">
+            <div class="card-header">
+                <h5>OCR Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Receiver Name:</label>
+                    <p id="receiverName">{{ data.ocr_text }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Target Floor:</label>
+                    <p id="targetFloor">{{ data.target_floor }}</p>
+                </div>
+                <div>
+                    <label class="fw-bold">Process Status:</label>
+                    <p>
+                        <span id="processStatus" class="badge" style="background-color: #FFC107; color: #212529;">{{ data.process_status }}</span>
+                    </p>
+                </div>
+                <div class="mt-4">
+                    <h6>Platform Tilt Direction</h6>
+                    <div id="platformTiltDirection" class="d-flex align-items-center">
+                        <i class="bi bi-dash-circle-fill text-secondary" style="font-size: 2rem;"></i>
+                        <span class="ms-2">No movement</span>
+                    </div>
+                </div>
+                <!-- New message element to indicate logging success -->
+                <div id="logMessage" class="alert alert-info" style="display: none; margin-top: 5px;">
+                  Package logged into database.
+                </div>
+                <!-- Process button always in the same position -->
+                <div class="mt-4">
+                  <!-- New OCR Progress Bar -->
+                  <div id="ocrProgressContainer" class="mb-3" style="display: none;">
+                      <div class="progress">
+                          <div id="ocrProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                               role="progressbar" 
+                               style="width: 0%;" 
+                               aria-valuenow="0" 
+                               aria-valuemin="0" 
+                               aria-valuemax="100">Processing...</div>
+                      </div>
+                  </div>
+                  
+                  <div class="text-center" id="processButtonContainer">
+                      <button id="processButton" class="btn btn-success" disabled>
+                          <i class="bi bi-play-fill me-2"></i>Start OCR Process
+                      </button>
+                  </div>
+              </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<div class="row">
+    <!-- IoT Platform Status -->
+<div class="col-md-4 mb-4">
+  <div class="card h-100">
+      <div class="card-header">
+          <h5>Device Status</h5>
+      </div>
+      <div class="card-body">
+          <div class="mb-3">
+              <label class="fw-bold">Camera:</label>
+              <span class="badge" style="background-color: #28a745;">{{ data.camera_status }}</span>
+          </div>
+          <div class="mb-3">
+              <label class="fw-bold">Servo:</label>
+              <span class="badge 
+                  {% if data.servo_status == 'Active' %} bg-success 
+                  {% else %} bg-danger {% endif %}" 
+                  style="color: #ffffff;">
+                  {{ data.servo_status }}
+              </span>
+          </div>
+          <div>
+              <label class="fw-bold">Last Update:</label>
+              <p>{{ data.last_update }}</p>
+              <small class="text-muted">Current time: {{ current_time }}</small>
+          </div>
+      </div>
+  </div>
+</div>
+
+    
+    <!-- Daily Statistics -->
+<div class="col-md-4 mb-4">
+  <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Today's Statistics</h5>
+          <a href="{{ url_for('advanced_statistics') }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-graph-up me-2"></i>Advanced Statistics
+        </a>
+      </div>
+      <div class="card-body">
+          <div class="mb-3">
+              <label class="fw-bold">Total Packages:</label>
+              <h3 id="totalPackagesCount">{{ data.total_packages }}</h3>
+          </div>
+          <div class="mb-3">
+              <label class="fw-bold">Auto Sorted:</label>
+              <div class="progress mb-2">
+                  <div class="progress-bar bg-success" role="progressbar" 
+                       style="width: {% if data.total_packages and data.total_packages > 0 %}{{ (data.auto_sorted / data.total_packages) * 100 }}%{% else %}0%{% endif %};"
+                       aria-valuenow="{{ data.auto_sorted }}"
+                       aria-valuemin="0" 
+                       aria-valuemax="{{ data.total_packages }}">
+                      {{ data.auto_sorted }}
+                  </div>
+              </div>
+          </div>
+          <div>
+              <label class="fw-bold">Manual Input:</label>
+              <div class="progress mb-2">
+                  <div class="progress-bar bg-warning" role="progressbar" 
+                       style="width: {% if data.total_packages and data.total_packages > 0 %}{{ (data.auto_sorted / data.total_packages) * 100 }}%{% else %}0%{% endif %};"
+                       aria-valuenow="{{ data.manual_input }}" aria-valuemin="0" 
+                       aria-valuemax="{{ data.total_packages }}">
+                      {{ data.manual_input }}
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+    
+    <!-- Quick Actions -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-center">
+              <a href="{{ url_for('db_crud_bp.manual_input') }}" class="btn btn-primary mb-3">
+                  Manual Input
+              </a>
+              <a href="{{ url_for('db_crud_bp.view_packages') }}" class="btn btn-primary mb-3">
+                  View All Packages
+              </a>
+              <a href="{{ url_for('db_crud_bp.database_management') }}" class="btn btn-primary mb-3">
+                  Database Management
+              </a>
+              <a href="{{ url_for('settings') }}" class="btn btn-primary">
+                  <i class="bi bi-gear me-2"></i>Settings
+              </a>
+          </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Cache DOM elements
+const elements = {
+  video: document.getElementById('webcam'),
+  capturedCanvas: document.getElementById('capturedCanvas'),
+  noWebcamMessage: document.getElementById('no-webcam'),
+  captureButton: document.getElementById('captureButton'),
+  recaptureButton: document.getElementById('recaptureButton'),
+  confirmCaptureButton: document.getElementById('confirmCaptureButton'),
+  processButton: document.getElementById('processButton'),
+  processButtonContainer: document.getElementById('processButtonContainer'),
+  captureStatus: document.getElementById('captureStatus'),
+  processStatus: document.getElementById('processStatus'),
+  receiverName: document.getElementById('receiverName'),
+  targetFloor: document.getElementById('targetFloor'),
+  captureControls: document.getElementById('captureControls'),
+  previewControls: document.getElementById('previewControls'),
+  cameraContainer: document.getElementById('camera-container'),
+  imageUpload: document.getElementById('imageUpload'),
+  logMessage: document.getElementById('logMessage'),
+  // Add statistics elements
+  totalPackages: document.getElementById('totalPackagesCount'), // Total Packages count
+  autoSortedProgress: document.querySelector('.progress-bar.bg-success'),
+  manualInputProgress: document.querySelector('.progress-bar.bg-warning')
+};
+
+let capturedImage = null, videoRatio = 16 / 9;
+
+// Helper to update an element's text and background color\
+const updateStatus = (el, text, bgColor) => {
+  el.textContent = text;
+  el.style.backgroundColor = bgColor;
+  el.style.color = "white"; // Add this line to make text white
+};
+
+// Helper to toggle display property
+const toggleDisplay = (el, state) => el.style.display = state;
+
+// Disable or enable key buttons
+const setButtonsState = (disabled) => {
+  elements.confirmCaptureButton.disabled = disabled;
+  elements.recaptureButton.disabled = disabled;
+  elements.processButton.disabled = disabled;
+};
+
+// Function to update statistics after successful OCR
+function updateStatistics() {
+  fetch('/get_stats', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Received stats:', data);
+    // Update total packages count
+    elements.totalPackages.textContent = data.total_packages;
+    
+    // Update auto sorted progress bar
+    const autoSortedPercentage = data.total_packages > 0 ? 
+      (data.auto_sorted / data.total_packages) * 100 : 0;
+    elements.autoSortedProgress.style.width = `${autoSortedPercentage}%`;
+    elements.autoSortedProgress.setAttribute('aria-valuenow', data.auto_sorted);
+    elements.autoSortedProgress.setAttribute('aria-valuemax', data.total_packages);
+    elements.autoSortedProgress.textContent = data.auto_sorted;
+    
+    // Update manual input progress bar
+    const manualInputPercentage = data.total_packages > 0 ? 
+      (data.manual_input / data.total_packages) * 100 : 0;
+    elements.manualInputProgress.style.width = `${manualInputPercentage}%`;
+    elements.manualInputProgress.setAttribute('aria-valuenow', data.manual_input);
+    elements.manualInputProgress.setAttribute('aria-valuemax', data.total_packages);
+    elements.manualInputProgress.textContent = data.manual_input;
+    
+    console.log("Statistics updated successfully");
+  })
+  .catch(error => {
+    console.error('Error fetching statistics:', error);
+  });
+}
+
+async function setupWebcam() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    elements.video.srcObject = stream;
+    toggleDisplay(elements.video, 'block');
+    toggleDisplay(elements.noWebcamMessage, 'none');
+    elements.video.onloadedmetadata = () => {
+      videoRatio = elements.video.videoWidth / elements.video.videoHeight;
+      elements.cameraContainer.style.paddingBottom = (1 / videoRatio * 100) + '%';
+      console.log(`Camera: ${elements.video.videoWidth}x${elements.video.videoHeight}`);
+    };
+  } catch (error) {
+    console.error('Error accessing camera:', error);
+    toggleDisplay(elements.video, 'none');
+    toggleDisplay(elements.noWebcamMessage, 'flex');
+  }
+}
+
+const flashCaptureEffect = () => {
+  const flash = document.createElement('div');
+  Object.assign(flash.style, {
+    position: 'absolute',
+    top: '0', left: '0', right: '0', bottom: '0',
+    backgroundColor: 'white',
+    opacity: '0.6',
+    zIndex: '1000',
+    transition: 'opacity 0.5s'
+  });
+  elements.cameraContainer.appendChild(flash);
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 500);
+  }, 100);
+};
+
+const showCapturedImage = (imgSrc, width, height) => {
+  const ctx = elements.capturedCanvas.getContext('2d');
+  elements.capturedCanvas.width = width;
+  elements.capturedCanvas.height = height;
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0);
+    toggleDisplay(elements.capturedCanvas, 'block');
+    toggleDisplay(elements.video, 'none');
+    toggleDisplay(elements.captureControls, 'none');
+    toggleDisplay(elements.previewControls, 'block');
+    // Clear previous log message
+    toggleDisplay(elements.logMessage, 'none');
+    // Make sure buttons are enabled
+    elements.confirmCaptureButton.disabled = false;
+    elements.recaptureButton.disabled = false;
+    elements.processButton.disabled = true; // Keep this disabled until confirmed
+    flashCaptureEffect();
+  };
+  img.src = imgSrc;
+};
+
+// Capture image from webcam
+elements.captureButton.addEventListener('click', () => {
+  const ctx = elements.capturedCanvas.getContext('2d');
+  elements.capturedCanvas.width = elements.video.videoWidth;
+  elements.capturedCanvas.height = elements.video.videoHeight;
+  ctx.drawImage(elements.video, 0, 0);
+  showCapturedImage(elements.capturedCanvas.toDataURL('image/jpeg'), elements.capturedCanvas.width, elements.capturedCanvas.height);
+});
+
+// Handle image upload
+elements.imageUpload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        showCapturedImage(event.target.result, img.width, img.height);
+        
+        // Hide the no-webcam message explicitly
+        elements.noWebcamMessage.style.display = 'none';
+        
+        // Enable the buttons after loading
+        elements.confirmCaptureButton.disabled = false;
+        elements.recaptureButton.disabled = false;
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Confirm capture: set image data and update UI
+elements.confirmCaptureButton.addEventListener('click', () => {
+  capturedImage = elements.capturedCanvas.toDataURL('image/jpeg');
+  elements.captureStatus.textContent = 'Package image captured - Ready for OCR';
+  elements.captureStatus.className = 'badge bg-success';
+  toggleDisplay(elements.captureStatus, 'inline');
+  // Enable process button for OCR processing
+  elements.processButton.disabled = false;
+  // Clear any log message from previous process
+  toggleDisplay(elements.logMessage, 'none');
+});
+
+// Update platform tilt direction based on floor number
+function updatePlatformTiltDirection(floor) {
+  const container = document.getElementById('platformTiltDirection');
+  const icon = container.querySelector('i');
+  const text = container.querySelector('span');
+  const tiltIcons = {
+    17: { icon: 'bi-arrow-up-circle-fill', text: 'Up (Floor 17)', color: 'text-primary' },
+    18: { icon: 'bi-arrow-left-circle-fill', text: 'Left (Floor 18)', color: 'text-primary' },
+    19: { icon: 'bi-arrow-down-circle-fill', text: 'Down (Floor 19)', color: 'text-primary' },
+    20: { icon: 'bi-arrow-right-circle-fill', text: 'Right (Floor 20)', color: 'text-primary' }
+  };
+  const data = tiltIcons[floor] || { icon: 'bi-dash-circle-fill', text: `No movement (Floor ${floor})`, color: 'text-secondary' };
+  icon.className = `bi ${data.icon} ${data.color}`;
+  icon.style.fontSize = '2rem';
+  text.textContent = data.text;
+}
+
+// Process OCR and update UI accordingly
+elements.processButton.addEventListener('click', () => {
+  if (!capturedImage) {
+    alert('Please capture and confirm an image first');
+    return;
+  }
+
+  // Collect all buttons to disable during OCR process
+  const buttonsToDisable = [
+    elements.captureButton,
+    elements.imageUpload,
+    elements.recaptureButton,
+    elements.confirmCaptureButton,
+    elements.processButton,
+    
+    // Add logout button
+    document.querySelector('a[href="{{ url_for('auth_bp.logout') }}"]'), // Adjust selector if needed
+    
+    // Add advanced statistics button
+    document.querySelector('a[href="{{ url_for('advanced_statistics') }}"]'),
+    
+
+    // Add quick action buttons
+    ...document.querySelectorAll('.card-body.d-flex.flex-column a.btn')
+  ];
+
+  // Disable all collected buttons
+  buttonsToDisable.forEach(button => {
+    if (button) {
+      // For anchor tags, add a 'disabled' class and prevent default click
+      if (button.tagName === 'A') {
+        button.classList.add('disabled');
+        button.addEventListener('click', preventClick);
+      } else {
+        button.disabled = true;
+      }
+    }
+  });
+
+  updateStatus(elements.processStatus, 'Processing...', '#17a2b8');
+
+  // Simulate OCR progress
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += Math.max(0.5, 18 * Math.pow(1 - progress / 100, 2));
+    updateOCRProgress(Math.min(progress, 99)); // Stop at 99% until server responds
+    
+    if (progress >= 99) {
+      clearInterval(progressInterval);
+    }
+  }, 500);
+
+  // Function to prevent click on disabled links
+  function preventClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Function to re-enable buttons
+  function reEnableButtons() {
+    buttonsToDisable.forEach(button => {
+      if (button) {
+        if (button.tagName === 'A') {
+          button.classList.remove('disabled');
+          button.removeEventListener('click', preventClick);
+        } else {
+          button.disabled = false;
+        }
+      }
+    });
+  }
+
+  fetch('/process_ocr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: capturedImage }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      // Clear the progress interval and set to 100%
+      clearInterval(progressInterval);
+      updateOCRProgress(100);
+      
+      // Small delay to show 100% progress
+      setTimeout(() => {
+        resetOCRProgress();
+        elements.receiverName.textContent = data.receiver_name || 'Not detected';
+        elements.targetFloor.textContent = data.target_floor || 'Unknown';
+        elements.processStatus.textContent = data.status || 'Completed';
+        if (data.target_floor) updatePlatformTiltDirection(parseInt(data.target_floor));
+        
+        // Re-enable buttons
+        reEnableButtons();
+        
+        updateStatus(elements.processStatus, data.status, data.status === 'Success' ? '#28a745' : '#dc3545');
+        
+        // If OCR was successful, update statistics and add "Process New Package" button
+        if (data.status === 'Success') {
+          updateStatistics();
+    
+          elements.logMessage.textContent = "Package logged into database.";
+          toggleDisplay(elements.logMessage, 'block');
+          
+          elements.processButton.style.display = 'none';
+          
+          const newPackageBtn = document.createElement('button');
+          newPackageBtn.id = 'newPackageBtn';
+          newPackageBtn.className = 'btn btn-primary';
+          newPackageBtn.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Process New Package';
+          
+          // Store the last OCR results as data attributes on the button
+          newPackageBtn.dataset.lastReceiverName = data.receiver_name || '';
+          newPackageBtn.dataset.lastTargetFloor = data.target_floor || '';
+          newPackageBtn.dataset.lastProcessStatus = data.status || '';
+          
+          newPackageBtn.addEventListener('click', () => {
+            // Reset UI to initial state (existing reset logic)
+            toggleDisplay(elements.capturedCanvas, 'none');
+            toggleDisplay(elements.video, 'block');
+            toggleDisplay(elements.captureControls, 'block');
+            toggleDisplay(elements.previewControls, 'none');
+            toggleDisplay(elements.captureStatus, 'none');
+            
+            elements.processButton.style.display = 'inline-block';
+            elements.processButton.disabled = true;
+            
+            newPackageBtn.remove();
+            
+            // Display the last OCR results
+            elements.receiverName.textContent = newPackageBtn.dataset.lastReceiverName;
+            elements.targetFloor.textContent = newPackageBtn.dataset.lastTargetFloor;
+            updateStatus(elements.processStatus, newPackageBtn.dataset.lastProcessStatus, '#28a745');
+            
+            // Update platform tilt direction based on last floor
+            const lastFloor = parseInt(newPackageBtn.dataset.lastTargetFloor);
+            if (lastFloor) {
+              updatePlatformTiltDirection(lastFloor);
+            } else {
+              const container = document.getElementById('platformTiltDirection');
+              const icon = container.querySelector('i');
+              const text = container.querySelector('span');
+              icon.className = 'bi bi-dash-circle-fill text-secondary';
+              icon.style.fontSize = '2rem';
+              text.textContent = 'No movement';
+            }
+            
+            capturedImage = null;
+            
+            toggleDisplay(elements.logMessage, 'none');
+          });
+          
+          elements.processButtonContainer.appendChild(newPackageBtn);
+        } else {
+          elements.processButton.disabled = false;
+        }
+      }, 500);
+    })
+    .catch(err => {
+      // Clear the progress interval
+      clearInterval(progressInterval);
+      resetOCRProgress();
+      
+      // Re-enable all buttons in case of an error
+      reEnableButtons();
+      
+      console.error('Error processing OCR:', err);
+      updateStatus(elements.processStatus, 'Error', '#dc3545');
+      alert('Failed to process the image. Please try again.');
+    });
+});
+
+// Recapture: reset to live video
+elements.recaptureButton.addEventListener('click', () => {
+  toggleDisplay(elements.capturedCanvas, 'none');
+  toggleDisplay(elements.video, 'block');
+  toggleDisplay(elements.captureControls, 'block');
+  toggleDisplay(elements.previewControls, 'none');
+  toggleDisplay(elements.captureStatus, 'none');
+  
+  // Reset process button to initial state
+  elements.processButton.style.display = 'inline-block';  // Ensure it's visible
+  elements.processButton.disabled = true;
+  
+  // Reset status to initial state
+  updateStatus(elements.processStatus, 'Ready for Scanning', '#FFC107');
+  
+  // Remove any "Process New Package" button if it exists
+  const newPackageBtn = document.getElementById('newPackageBtn');
+  if (newPackageBtn) newPackageBtn.remove();
+  
+  // Reset receiver name and target floor
+  elements.receiverName.textContent = '';
+  elements.targetFloor.textContent = '';
+  
+  // Reset platform tilt direction
+  const container = document.getElementById('platformTiltDirection');
+  const icon = container.querySelector('i');
+  const text = container.querySelector('span');
+  icon.className = 'bi bi-dash-circle-fill text-secondary';
+  icon.style.fontSize = '2rem';
+  text.textContent = 'No movement';
+  
+  // Reset log message
+  toggleDisplay(elements.logMessage, 'none');
+  
+  capturedImage = null;
+  resetOCRProgress();
+});
+
+// Update clock every second
+setInterval(() => {
+  const now = new Date();
+  document.querySelector('small.text-muted').textContent =
+    'Current time: ' + [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => n.toString().padStart(2, '0')).join(':');
+}, 1000);
+
+window.addEventListener('load', setupWebcam);
+
+document.addEventListener("DOMContentLoaded", function () {
+  let progressBars = document.querySelectorAll(".progress-bar");
+  progressBars.forEach(bar => {
+      let value = parseFloat(bar.getAttribute("aria-valuenow")) || 0;
+      let max = parseFloat(bar.getAttribute("aria-valuemax")) || 1;
+      let percentage = max > 0 ? (value / max) * 100 : 0;
+      bar.style.width = percentage + "%";
+  });
+});
+
+async function initCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: { ideal: 'environment' },  // More flexible facing mode
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        });
+        elements.video.srcObject = stream;
+        elements.noWebcamMessage.style.display = 'none';
+        updateStatus(document.querySelector('.badge[style*="background-color: #28a745;"]'), 'Online', '#28a745');
+    } catch (error) {
+        console.error("Camera access error:", error);
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        elements.video.style.display = 'none';
+        elements.noWebcamMessage.style.display = 'flex';
+        updateStatus(document.querySelector('.badge[style*="background-color: #28a745;"]'), 'Offline', '#dc3545');
+    }
+}
+
+// Call the function to initialize the camera
+initCamera();
+
+// Cache the OCR progress bar elements
+const ocrProgressContainer = document.getElementById('ocrProgressContainer');
+const ocrProgressBar = document.getElementById('ocrProgressBar');
+
+// Function to show and update OCR progress
+function updateOCRProgress(progress) {
+  // Ensure progress is between 0 and 100
+  progress = Math.max(0, Math.min(100, progress));
+  
+  // Show progress container
+  ocrProgressContainer.style.display = 'block';
+  
+  // Update progress bar
+  ocrProgressBar.style.width = `${progress}%`;
+  ocrProgressBar.setAttribute('aria-valuenow', progress);
+  
+  // Change color based on progress
+  if (progress < 33) {
+    ocrProgressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-danger';
+  } else if (progress < 66) {
+    ocrProgressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning';
+  } else {
+    ocrProgressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+  }
+}
+
+// Function to reset OCR progress
+function resetOCRProgress() {
+  ocrProgressContainer.style.display = 'none';
+  ocrProgressBar.style.width = '0%';
+  ocrProgressBar.setAttribute('aria-valuenow', '0');
+  ocrProgressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+}
+
+</script>
+{% endblock %}

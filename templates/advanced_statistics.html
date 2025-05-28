@@ -1,0 +1,663 @@
+{% extends 'base.html' %}
+
+{% block title %}Comprehensive Package Insights{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-4 g-3">
+        <div class="col-auto">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </a>
+        </div>
+        <div class="col">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <h1 class="h3 mb-0 me-3">
+                    <i class="bi bi-graph-up me-2"></i>Comprehensive Package Insights
+                </h1>
+                <div class="d-flex align-items-center">
+                    <span class="me-3 text-muted d-none d-md-inline">Date Range:</span>
+                    <div class="btn-group btn-group-sm" role="group" id="date-range-filter">
+                        <a href="{{ url_for('advanced_statistics', range='week') }}" 
+                           class="btn btn-outline-secondary {{ 'active' if stats.current_range == 'week' else '' }}" 
+                           id="lastWeek">Last 7 Days</a>
+                        <a href="{{ url_for('advanced_statistics', range='month') }}" 
+                           class="btn btn-outline-secondary {{ 'active' if stats.current_range == 'month' else '' }}" 
+                           id="lastMonth">Last 30 Days</a>
+                        <a href="{{ url_for('advanced_statistics', range='all') }}" 
+                           class="btn btn-outline-secondary {{ 'active' if stats.current_range == 'all' else '' }}" 
+                           id="allTime">All Time</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden element to store initial data -->
+    <script id="initial-data" type="application/json">{{ stats | tojson }}</script>
+
+    <!-- Key Performance Indicators -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-left-primary shadow-sm h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Packages</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.kpis.total_packages }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-box-seam fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-left-success shadow-sm h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Delivered Packages</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.kpis.delivered_packages }} ({{ stats.kpis.delivery_rate }}%)</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-left-info shadow-sm h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Avg. Processing Time</div>
+                            <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ stats.time_metrics.avg_processing_time }} mins</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-left-warning shadow-sm h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Packages</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.kpis.pending_packages }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-hourglass-split fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Visualizations -->
+    <div class="row g-3">
+        <!-- Temporal Analysis with Advanced Insights -->
+        <div class="col-md-8">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Temporal Package Flow</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="temporal-view" id="hourly-view" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary" for="hourly-view">Hourly</label>
+                        <input type="radio" class="btn-check" name="temporal-view" id="daily-view" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="daily-view">Daily</label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height:300px;">
+                        <canvas id="temporalPackageChart"></canvas>
+                    </div>
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6">
+                            <h6>Peak Periods</h6>
+                            <ul class="list-group">
+                                {% for period, details in stats.temporal_stats.peak_periods.items() %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ period }}
+                                    <span class="badge bg-primary rounded-pill">{{ details.count }} packages</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Operational Forecasting</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    {% set busiest_period_key = stats.temporal_stats.peak_periods | items | sort(attribute='1.count') | last | first %}
+                                    {% set busiest_period_count = stats.temporal_stats.peak_periods[busiest_period_key].count %}
+                                    <p class="card-text">
+                                        Busiest Period: 
+                                        <strong>
+                                            {{ busiest_period_key }} ({{ busiest_period_count }} packages)
+                                        </strong>
+                                    </p>
+                                    <ul class="list-unstyled small text-muted">
+                                        <li>• Average hourly package volume: {{ (stats.kpis.total_packages / 24) | round(1) }} packages</li>
+                                        <li>• Current processing capacity utilization: {{ ((stats.kpis.delivered_packages / stats.kpis.total_packages) * 100) | round(1) if stats.kpis.total_packages > 0 else 0 }}%</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mt-3">
+                        <!-- Operational Bottlenecks Section -->
+                        <div class="col-md-12">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header">
+                                    <h5>Operational Bottlenecks</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="list-group">
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">Processing Time Variability</h6>
+                                                <small class="text-muted">Performance Impact</small>
+                                            </div>
+                                            <p class="mb-1">
+                                                Average processing time: {{ stats.time_metrics.avg_processing_time }} minutes
+                                                <span class="badge bg-warning">{{ 
+                                                    "High" if stats.time_metrics.avg_processing_time > 120 else 
+                                                    "Medium" if stats.time_metrics.avg_processing_time > 60 else 
+                                                    "Low" 
+                                                }} Variability</span>
+                                            </p>
+                                        </div>
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">Floor Distribution Variance</h6>
+                                                <small class="text-muted">Operational Challenge</small>
+                                            </div>
+                                            <p class="mb-1">
+                                                {% set min_floor = stats.floor_distribution | items | sort(attribute='1') | first %}
+                                                Least utilized floor: 
+                                                Floor {{ min_floor[0] }} ({{ min_floor[1] }}% utilization)
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution Breakdown and Performance Metrics -->
+        <div class="col-md-4">
+            <!-- Distribution Breakdown -->
+            <div class="card h-50 shadow-sm mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Distribution Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height:250px;">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="distribution-type" id="floor-dist" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="floor-dist">By Floor</label>
+                            <input type="radio" class="btn-check" name="distribution-type" id="type-dist" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="type-dist">By Package Type</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="card h-50 shadow-sm">
+                <div class="card-header">
+                    <h5>Performance Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Delivery Efficiency</td>
+                                    <td>{{ stats.performance_metrics.delivery_efficiency }}%</td>
+                                    <td><i class="bi bi-arrow-up text-success"></i></td>
+                                </tr>
+                                <tr>
+                                    <td>Average Handling Time</td>
+                                    <td>{{ stats.performance_metrics.avg_handling_time }} hours</td>
+                                    <td><i class="bi bi-arrow-down text-success"></i></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<style>
+    body.loading::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.7);
+        z-index: 9999;
+    }
+    body.loading::before {
+        content: 'Loading...';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        z-index: 10000;
+    }
+    </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize charts with default data
+    let temporalChart, distributionChart;
+    let currentData = JSON.parse(document.getElementById('initial-data').textContent);
+    
+    initializeCharts(currentData);
+    
+    // Function to initialize charts
+    function initializeCharts(data) {
+        // Temporal Package Flow Chart
+        const temporalCtx = document.getElementById('temporalPackageChart').getContext('2d');
+        temporalChart = new Chart(temporalCtx, {
+            type: 'line',
+            data: {
+                labels: Object.keys(data.temporal_stats.packages_by_hour),
+                datasets: [{
+                    label: 'Hourly Package Volume',
+                    data: Object.values(data.temporal_stats.packages_by_hour),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Distribution Chart
+        const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+        distributionChart = new Chart(distributionCtx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(data.floor_distribution),
+                datasets: [{
+                    data: Object.values(data.floor_distribution),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(199, 199, 199, 0.6)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: {
+                        color: '#fff',
+                        formatter: (value, context) => {
+                            return context.chart.data.labels[context.dataIndex] + ': ' + value + '%';
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to update all UI elements with new data
+    function updateUI(data) {
+        try {
+            // Update KPI values - Find elements by their card position and content context
+            const kpiCards = document.querySelectorAll('.card-body');
+            if (kpiCards.length >= 4) {
+                // Total Packages
+                const totalPackagesCard = document.querySelector('.card-body .text-xs.text-primary');
+                if (totalPackagesCard) {
+                    const valueElement = totalPackagesCard.parentElement.querySelector('.h5');
+                    if (valueElement) valueElement.textContent = data.kpis.total_packages;
+                }
+                
+                // Delivered Packages
+                const deliveredPackagesCard = document.querySelector('.card-body .text-xs.text-success');
+                if (deliveredPackagesCard) {
+                    const valueElement = deliveredPackagesCard.parentElement.querySelector('.h5');
+                    if (valueElement) valueElement.textContent = `${data.kpis.delivered_packages} (${data.kpis.delivery_rate}%)`;
+                }
+                
+                // Avg Processing Time
+                const processingTimeCard = document.querySelector('.card-body .text-xs.text-info');
+                if (processingTimeCard) {
+                    const valueElement = processingTimeCard.parentElement.querySelector('.h5');
+                    if (valueElement) valueElement.textContent = `${data.time_metrics.avg_processing_time} mins`;
+                }
+                
+                // Pending Packages
+                const pendingPackagesCard = document.querySelector('.card-body .text-xs.text-warning');
+                if (pendingPackagesCard) {
+                    const valueElement = pendingPackagesCard.parentElement.querySelector('.h5');
+                    if (valueElement) valueElement.textContent = data.kpis.pending_packages;
+                }
+            }
+            
+            // Update peak periods - find by heading text content
+            const peakPeriodsHeading = Array.from(document.querySelectorAll('h6')).find(h => h.textContent === 'Peak Periods');
+            if (peakPeriodsHeading) {
+                const peakPeriodsList = peakPeriodsHeading.nextElementSibling;
+                if (peakPeriodsList && peakPeriodsList.tagName === 'UL') {
+                    let peakPeriodsHTML = '';
+                    for (const [period, details] of Object.entries(data.temporal_stats.peak_periods)) {
+                        peakPeriodsHTML += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${period}
+                            <span class="badge bg-primary rounded-pill">${details.count} packages</span>
+                        </li>`;
+                    }
+                    peakPeriodsList.innerHTML = peakPeriodsHTML;
+                }
+            }
+            
+            // Update operational forecasting
+            const forecastingHeading = Array.from(document.querySelectorAll('h6')).find(h => h.textContent === 'Operational Forecasting');
+            if (forecastingHeading) {
+                const forecastingCard = forecastingHeading.nextElementSibling;
+                if (forecastingCard && forecastingCard.classList.contains('card')) {
+                    const cardBody = forecastingCard.querySelector('.card-body');
+                    if (cardBody) {
+                        // Find busiest period
+                        let busiestPeriodKey = '';
+                        let busiestPeriodCount = 0;
+                        
+                        for (const [period, details] of Object.entries(data.temporal_stats.peak_periods)) {
+                            if (details.count > busiestPeriodCount) {
+                                busiestPeriodCount = details.count;
+                                busiestPeriodKey = period;
+                            }
+                        }
+                        
+                        const forecastingHTML = `
+                        <p class="card-text">
+                            Busiest Period: 
+                            <strong>
+                                ${busiestPeriodKey} (${busiestPeriodCount} packages)
+                            </strong>
+                        </p>
+                        <ul class="list-unstyled small text-muted">
+                            <li>• Average hourly package volume: ${(data.kpis.total_packages / 24).toFixed(1)} packages</li>
+                            <li>• Current processing capacity utilization: ${data.performance_metrics.delivery_efficiency}%</li>
+                        </ul>`;
+                        cardBody.innerHTML = forecastingHTML;
+                    }
+                }
+            }
+            
+            // Update performance metrics
+            const performanceMetricsHeading = Array.from(document.querySelectorAll('h5')).find(h => h.textContent === 'Performance Metrics');
+            if (performanceMetricsHeading) {
+                const performanceCard = performanceMetricsHeading.closest('.card');
+                if (performanceCard) {
+                    const tableBody = performanceCard.querySelector('tbody');
+                    if (tableBody) {
+                        const rows = tableBody.querySelectorAll('tr');
+                        if (rows.length >= 2) {
+                            const deliveryEffCell = rows[0].querySelectorAll('td')[1];
+                            if (deliveryEffCell) deliveryEffCell.textContent = `${data.performance_metrics.delivery_efficiency}%`;
+                            
+                            const handlingTimeCell = rows[1].querySelectorAll('td')[1];
+                            if (handlingTimeCell) handlingTimeCell.textContent = `${data.performance_metrics.avg_handling_time} hours`;
+                        }
+                    }
+                }
+            }
+            
+            // Update operational bottlenecks
+            const processingTimeHeading = Array.from(document.querySelectorAll('h6')).find(h => h.textContent === 'Processing Time Variability');
+            if (processingTimeHeading) {
+                const processingTimeElement = processingTimeHeading.closest('.list-group-item').querySelector('p');
+                if (processingTimeElement) {
+                    const variabilityLevel = data.time_metrics.avg_processing_time > 120 ? "High" : 
+                                           data.time_metrics.avg_processing_time > 60 ? "Medium" : "Low";
+                    processingTimeElement.innerHTML = `
+                        Average processing time: ${data.time_metrics.avg_processing_time} minutes
+                        <span class="badge bg-warning">${variabilityLevel} Variability</span>
+                    `;
+                }
+            }
+            
+            // Update floor distribution variance - FIX: Use a more reliable way to find the element
+            updateFloorVarianceDisplay(data.floor_distribution);
+            
+            // Update charts
+            updateCharts(data);
+        } catch (error) {
+            console.error('Error updating UI:', error);
+            alert(`Failed to update UI elements: ${error.message || 'Please refresh the page.'}`);
+        }
+    }
+    
+    // Function to update charts with new data
+    function updateCharts(data) {
+        // Update temporal chart based on current view
+        const isHourly = document.getElementById('hourly-view').checked;
+        
+        temporalChart.data.labels = isHourly 
+            ? Object.keys(data.temporal_stats.packages_by_hour)
+            : Object.keys(data.temporal_stats.packages_by_day);
+        
+        temporalChart.data.datasets[0].data = isHourly
+            ? Object.values(data.temporal_stats.packages_by_hour)
+            : Object.values(data.temporal_stats.packages_by_day);
+        
+        temporalChart.data.datasets[0].label = isHourly 
+            ? 'Hourly Package Volume' 
+            : 'Daily Package Volume';
+        
+        temporalChart.update();
+        
+        // Update distribution chart based on current view
+        const isFloor = document.getElementById('floor-dist').checked;
+        
+        distributionChart.data.labels = isFloor
+            ? Object.keys(data.floor_distribution)
+            : Object.keys(data.package_type_breakdown.ocr_vs_manual);
+        
+        distributionChart.data.datasets[0].data = isFloor
+            ? Object.values(data.floor_distribution)
+            : Object.values(data.package_type_breakdown.ocr_vs_manual);
+        
+        distributionChart.update();
+    }
+    
+    // Function to fetch data for a specific date range
+    function fetchDataForDateRange(range) {
+        // Show loading indicator
+        document.body.classList.add('loading');
+        
+        // Make AJAX request
+        fetch(`/get_stats_by_date?range=${range}`)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Network response was not ok');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Update the current data
+                currentData = data;
+                currentData.current_range = range;
+                
+                // Update UI with new data
+                updateUI(data);
+                
+                // Update URL state without page reload
+                history.pushState({}, '', `/advanced_statistics?range=${range}`);
+                
+                // Hide loading indicator
+                document.body.classList.remove('loading');
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                // Hide loading indicator
+                document.body.classList.remove('loading');
+                // Show error message to user
+                alert(`Failed to load data: ${error.message || 'Please try again later.'}`);
+            });
+    }
+    
+    // FIX: Using a better approach to find and update the floor variance display
+    function updateFloorVarianceDisplay(floorDistributionData) {
+        try {
+            // Find the minimum floor utilization
+            let minFloor = '';
+            let minValue = 100; // Start with maximum possible percentage
+            
+            for (const [floor, percentage] of Object.entries(floorDistributionData)) {
+                if (percentage < minValue) {
+                    minValue = percentage;
+                    minFloor = floor;
+                }
+            }
+            
+            // Find the floor distribution variance heading and then the paragraph inside its list-group-item
+            const floorVarianceHeading = Array.from(document.querySelectorAll('h6')).find(h => 
+                h.textContent === 'Floor Distribution Variance');
+                
+            if (floorVarianceHeading) {
+                const floorVarianceItem = floorVarianceHeading.closest('.list-group-item');
+                if (floorVarianceItem) {
+                    const paragraphElement = floorVarianceItem.querySelector('p');
+                    if (paragraphElement) {
+                        paragraphElement.innerHTML = `
+                            Least utilized floor: 
+                            Floor ${minFloor} (${minValue}% utilization)
+                        `;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating floor variance display:', error);
+        }
+    }
+
+    // Toggle Temporal View
+    document.querySelectorAll('input[name="temporal-view"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            try {
+                const isHourly = this.id === 'hourly-view';
+                
+                // Modify chart data based on view
+                temporalChart.data.labels = isHourly 
+                    ? Object.keys(currentData.temporal_stats.packages_by_hour)
+                    : Object.keys(currentData.temporal_stats.packages_by_day);
+                
+                temporalChart.data.datasets[0].data = isHourly
+                    ? Object.values(currentData.temporal_stats.packages_by_hour)
+                    : Object.values(currentData.temporal_stats.packages_by_day);
+                
+                temporalChart.data.datasets[0].label = isHourly 
+                    ? 'Hourly Package Volume' 
+                    : 'Daily Package Volume';
+                
+                temporalChart.update();
+            } catch (error) {
+                console.error('Error updating temporal view:', error);
+            }
+        });
+    });
+
+    // Toggle Distribution View
+    document.querySelectorAll('input[name="distribution-type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            try {
+                const isFloor = this.id === 'floor-dist';
+                
+                distributionChart.data.labels = isFloor
+                    ? Object.keys(currentData.floor_distribution)
+                    : Object.keys(currentData.package_type_breakdown.ocr_vs_manual);
+                
+                distributionChart.data.datasets[0].data = isFloor
+                    ? Object.values(currentData.floor_distribution)
+                    : Object.values(currentData.package_type_breakdown.ocr_vs_manual);
+                
+                distributionChart.update();
+            } catch (error) {
+                console.error('Error updating distribution view:', error);
+            }
+        });
+    });
+
+    // Date Range Filtering
+    document.getElementById('date-range-filter').addEventListener('click', function(e) {
+        // Using event delegation for better robustness
+        if (e.target.tagName === 'A') {
+            e.preventDefault();
+            
+            // Extract the range from the clicked element
+            const range = e.target.id === 'lastWeek' ? 'week' :
+                         e.target.id === 'lastMonth' ? 'month' : 'all';
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('#date-range-filter a').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            e.target.classList.add('active');
+            
+            // Fetch data for the selected range
+            fetchDataForDateRange(range);
+        }
+    });
+});
+</script>
+<script src="{{ url_for('static', filename='js/advanced-statistics.js') }}"></script>
+{% endblock %}

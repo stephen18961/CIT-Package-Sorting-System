@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CIT Package Sorting System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --main-color: #800507;
+            --main-color-hover: #9a0609;
+            --light-color: #f8e9e9;
+            --text-on-main: #ffffff;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background-color: var(--main-color);
+            color: var(--text-on-main);
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .campus-logo {
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        .camera-feed {
+            background-color: #333;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .status-card {
+            height: 100%;
+        }
+        
+        .btn-primary {
+            background-color: var(--main-color);
+            border-color: var(--main-color);
+        }
+        
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background-color: var(--main-color-hover) !important;
+            border-color: var(--main-color-hover) !important;
+        }
+        
+        .bg-primary {
+            background-color: var(--main-color) !important;
+        }
+        
+        .text-primary {
+            color: var(--main-color) !important;
+        }
+        
+        .border-primary {
+            border-color: var(--main-color) !important;
+        }
+        
+        .progress-bar {
+            background-color: var(--main-color);
+        }
+        
+        .card-header {
+            background-color: #f0f0f0;
+            border-bottom: 2px solid var(--main-color);
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <div class="header d-flex justify-content-between align-items-center">
+        <div class="logo d-flex align-items-center">
+            <img src="{{ url_for('static', filename='cit_logo_white.png') }}" alt="CIT Logo" class="campus-logo">
+            <h5>CIT Package Sorting System</h5>
+        </div>
+        <div class="user-info d-flex align-items-center">
+            <span class="me-3">{{ admin_name }}</span>
+            <a href="{{ url_for('auth_bp.logout') }}" class="btn btn-light btn-sm">Logout</a>
+        </div>        
+    </div>
+    
+    <div class="container-fluid mt-3">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

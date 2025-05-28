@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Package OCR Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container {
+            width: 720px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        #videoStream {
+            border: 1px solid #ccc;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 16px;
+        }
+        .notice {
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Live Stream (RTSP via Flask)</h1>
+    <!-- Display the MJPEG stream -->
+    <img id="videoStream" src="{{ url_for('video_feed') }}" width="640" height="480" alt="Live Stream">
+
+    <!-- A button that triggers the JavaScript capture function -->
+    <button onclick="captureImage()">Capture</button>
+
+    <div id="result" class="notice"></div>
+</div>
+
+<script>
+function captureImage() {
+    // Get the displayed image element
+    var img = document.getElementById('videoStream');
+    
+    // Create a temporary canvas with the same dimensions
+    var canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    var ctx = canvas.getContext('2d');
+    
+    // Draw the current frame from the image onto the canvas
+    ctx.drawImage(img, 0, 0, img.width, img.height);
+    
+    // Convert the canvas to a base64-encoded JPEG image
+    var dataURL = canvas.toDataURL('image/jpeg');
+    
+    // Send the image data to the server via POST (using fetch)
+    fetch('/capture', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ image: dataURL })
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('result').innerText = data;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = "Error capturing image.";
+    });
+}
+</script>
+</body>
+</html>
