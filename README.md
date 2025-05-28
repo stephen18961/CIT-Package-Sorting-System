@@ -2,6 +2,8 @@
 
 Welcome to the CIT Package Sorting System! This project is a Flask-based web application designed to streamline package management and sorting within a campus environment using Optical Character Recognition (OCR).
 
+This system was developed as a Capstone Project (Tugas Akhir) for the 8th semester at Calvin Institute of Technology by Stephen and Cleve.
+
 ## Overview
 
 The system captures images of package labels (either via webcam or direct upload), uses OCR to extract recipient information, matches it against a database of students and staff, and suggests a target floor for sorting. It includes a comprehensive dashboard for monitoring, manual data entry, database management, and advanced statistical insights into package processing.
@@ -69,7 +71,7 @@ The system captures images of package labels (either via webcam or direct upload
     *Note: If you encounter issues with TensorFlow, ensure your Python, CUDA, and cuDNN versions are compatible. TensorFlow 2.10 is specified.*
 
 4.  **Keras-OCR Models**:
-    The system uses Keras-OCR. The pre-trained models for Keras-OCR will be downloaded automatically on first use if not already cached. The custom recognizer model `models/recognizer_with_augment.h5` should be present in the `models` directory at the project root.
+    The system uses Keras-OCR with its default pre-trained models. These will be downloaded automatically on first use if not already cached. No additional model files are required.
 
 5.  **Initial Data (Optional)**:
     *   The database (`instance/packages.db`) will be created automatically when you first run the application.
@@ -173,8 +175,6 @@ CIT-Package-Sorting-System/
 ├── database_list/              # Sample CSVs for initial student/staff data
 │   ├── list_staff.csv
 │   └── mahasiswa_dorm.csv
-├── models/                     # Directory for Keras-OCR model files
-│   └── recognizer_with_augment.h5 # Custom trained OCR recognizer model
 ├── test_data/                  # Recommended: Place OCR test images here
 ├── ocr_accuracy_results/       # Default output for accuracy_py and new_accuracy_check.py
 ├── parameter_optimization_results/ # Default output for brute_force.py
